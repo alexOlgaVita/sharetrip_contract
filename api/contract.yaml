@@ -1,0 +1,427 @@
+openapi: 3.0.3
+info:
+  title: Contract Service API
+  version: 1.0.0
+  description: |
+    Внешний API Contract Service (Go).
+
+    Сервис отвечает за договорные условия компаний и проверку доступности услуг.
+    Не управляет поездками, уведомлениями, пользователями и авторизацией.
+
+servers:
+  - url: /v1
+    description: Contract Service
+
+tags:
+  - name: Contracts
+    description: Управление договорами компаний
+  - name: ContractServices
+    description: Услуги, доступные по договору
+  - name: Availability
+    description: Бизнес-проверка доступности услуги
+
+paths:
+  /contracts:
+    post:
+      tags: [Contracts]
+      operationId: createContract
+      summary: Создать договор для компании
+      description: |
+        Создаёт новый договор для компании.
+        У компании может быть только один договор со статусом `active`.
+        Создание со статусом `active` при уже существующем активном договоре
+        той же компании приводит к ошибке конфликта.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContractRequest'
+            example:
+              companyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              status: draft
+              validFrom: "2026-08-01T00:00:00Z"
+              validTo: "2027-08-01T00:00:00Z"
+              services:
+                - serviceCode: trip.create
+                  enabled: true
+                - serviceCode: trip.share
+                  enabled: true
+      responses:
+        "201":
+          description: Договор создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "409":
+          description: |
+            Конфликт бизнес-правила:
+            - у компании уже есть активный договор;
+            - дублирующиеся коды услуг в запросе.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          $ref: '#/components/responses/InternalError'
+
+  /contracts/{contractId}:
+    get:
+      tags: [Contracts]
+      operationId: getContractById
+      summary: Получить договор по идентификатору
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      responses:
+        "200":
+          description: Договор найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "500":
+          $ref: '#/components/responses/InternalError'
+
+  /companies/{companyId}/active-contract:
+    get:
+      tags: [Contracts]
+      operationId: getActiveContractByCompany
+      summary: Получить активный договор компании
+      description: |
+        Возвращает договор компании со статусом `active`.
+        Для решения о доступе к услуге используйте
+        `POST /service-availability-checks`.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+      responses:
+        "200":
+          description: Активный договор найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        "404":
+          description: У компании нет активного договора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          $ref: '#/components/responses/InternalError'
+
+  /contracts/{contractId}/status-changes:
+    post:
+      tags: [Contracts]
+      operationId: changeContractStatus
+      summary: Изменить статус договора
+      description: |
+        Бизнес-операция смены статуса.
+        Переход в `active` запрещён, если у компании уже есть другой активный договор.
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeContractStatusRequest'
+            example:
+              status: active
+      responses:
+        "200":
+          description: Статус изменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: |
+            Конфликт: недопустимый переход статуса или уже есть активный договор.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          $ref: '#/components/responses/InternalError'
+
+  /contracts/{contractId}/services:
+    put:
+      tags: [ContractServices]
+      operationId: replaceContractServices
+      summary: Добавить или обновить список доступных услуг
+      description: |
+        Полностью заменяет список услуг договора.
+        Одна и та же услуга не может встречаться в списке дважды.
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceContractServicesRequest'
+            example:
+              services:
+                - serviceCode: trip.create
+                  enabled: true
+                - serviceCode: trip.share
+                  enabled: false
+      responses:
+        "200":
+          description: Список услуг обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: В запросе дублируются коды услуг
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          $ref: '#/components/responses/InternalError'
+
+  /service-availability-checks:
+    post:
+      tags: [Availability]
+      operationId: checkServiceAvailability
+      summary: Проверить доступность услуги для компании
+      description: |
+        Отдельный бизнес-метод для ShareTrip.
+
+        Вопрос: может ли компания использовать указанную услугу прямо сейчас?
+
+        Учитывает активный договор, статусы suspended/terminated,
+        даты начала и окончания, наличие услуги и признак enabled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceAvailabilityCheckRequest'
+            example:
+              companyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              serviceCode: trip.create
+      responses:
+        "200":
+          description: |
+            Результат проверки. HTTP 200 и при отказе:
+            причина в теле (`allowed: false`, `reason`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceAvailabilityCheckResponse'
+              examples:
+                allowed:
+                  summary: Услуга доступна
+                  value:
+                    allowed: true
+                    companyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    serviceCode: trip.create
+                    contractId: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                denied:
+                  summary: Услуга недоступна
+                  value:
+                    allowed: false
+                    companyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    serviceCode: trip.create
+                    reason: NO_ACTIVE_CONTRACT
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    ContractId:
+      name: contractId
+      in: path
+      required: true
+      description: Идентификатор договора
+      schema:
+        type: string
+        format: uuid
+
+    CompanyId:
+      name: companyId
+      in: path
+      required: true
+      description: Идентификатор компании
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Сущность не найдена
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    ContractStatus:
+      type: string
+      enum: [draft, active, suspended, terminated]
+
+    DenialReason:
+      type: string
+      enum:
+        - NO_ACTIVE_CONTRACT
+        - CONTRACT_SUSPENDED
+        - CONTRACT_TERMINATED
+        - CONTRACT_NOT_STARTED
+        - CONTRACT_EXPIRED
+        - SERVICE_NOT_IN_CONTRACT
+        - SERVICE_DISABLED
+
+    ContractServiceItem:
+      type: object
+      required: [serviceCode, enabled]
+      properties:
+        serviceCode:
+          type: string
+          minLength: 1
+          maxLength: 64
+          example: trip.create
+        enabled:
+          type: boolean
+
+    CreateContractRequest:
+      type: object
+      required: [companyId, status, validFrom]
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ContractStatus'
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+          nullable: true
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractServiceItem'
+
+    ChangeContractStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/ContractStatus'
+
+    ReplaceContractServicesRequest:
+      type: object
+      required: [services]
+      properties:
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractServiceItem'
+
+    ServiceAvailabilityCheckRequest:
+      type: object
+      required: [companyId, serviceCode]
+      properties:
+        companyId:
+          type: string
+          format: uuid
+        serviceCode:
+          type: string
+          minLength: 1
+          maxLength: 64
+          example: trip.create
+
+    ServiceAvailabilityCheckResponse:
+      type: object
+      required: [allowed, companyId, serviceCode]
+      properties:
+        allowed:
+          type: boolean
+        companyId:
+          type: string
+          format: uuid
+        serviceCode:
+          type: string
+        contractId:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          allOf:
+            - $ref: '#/components/schemas/DenialReason'
+          nullable: true
+
+    Contract:
+      type: object
+      required: [id, companyId, status, validFrom, services, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ContractStatus'
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+          nullable: true
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractServiceItem'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: companyId must be a valid UUID
