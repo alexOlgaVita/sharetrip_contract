@@ -10,7 +10,6 @@ CREATE TABLE contract_services (
                                    service_code TEXT NOT NULL,
                                    is_available BOOLEAN NOT NULL DEFAULT TRUE,
                                    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-                                   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     -- FK: contract_services.contract_id → contracts.id
                                    CONSTRAINT fk_contract_services_contract

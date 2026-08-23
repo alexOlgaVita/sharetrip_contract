@@ -230,15 +230,11 @@ paths:
                   summary: Услуга доступна
                   value:
                     allowed: true
-                    companyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-                    serviceCode: trip.create
-                    contractId: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                    reason: service_allowed
                 denied:
                   summary: Услуга недоступна
                   value:
                     allowed: false
-                    companyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-                    serviceCode: trip.create
                     reason: NO_ACTIVE_CONTRACT
         "400":
           $ref: '#/components/responses/BadRequest'
@@ -371,15 +367,6 @@ components:
       properties:
         allowed:
           type: boolean
-        companyId:
-          type: string
-          format: uuid
-        serviceCode:
-          type: string
-        contractId:
-          type: string
-          format: uuid
-          nullable: true
         reason:
           allOf:
             - $ref: '#/components/schemas/DenialReason'

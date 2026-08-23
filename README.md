@@ -42,14 +42,14 @@ README.md           — ответственность, бизнес-прави�
 
 Описание: [`api/contract.yaml`](api/contract.yaml).
 
-| Действие                           | Метод  | URL                                         |
-|------------------------------------|--------|---------------------------------------------|
-| Создать договор                    | `POST` | `/v1/contracts`                             |
-| Получить договор по id             | `GET`  | `/v1/contracts/{contractId}`                |
-| Получить активный договор компании | `GET`  | `/v1/companies/{companyId}/active-contract` |
-| Изменить статус договора           | `POST` | `/v1/contracts/{contractId}/status-changes` |
-| Заменить список услуг договора     | `PUT`  | `/v1/contracts/{contractId}/services`       |
-| Проверить доступность услуги       | `POST` | `/v1/service-availability-checks`           |
+| Действие                           | Метод  | URL                                      |
+|------------------------------------|--------|------------------------------------------|
+| Создать договор                    | `POST` | `/contracts`                             |
+| Получить договор по id             | `GET`  | `/contracts/{contractId}`                |
+| Получить активный договор компании | `GET`  | `/companies/{companyId}/active-contract` |
+| Изменить статус договора           | `POST` | `/contracts/{contractId}/status-changes` |
+| Заменить список услуг договора     | `PUT`  | `/contracts/{contractId}/services`       |
+| Проверить доступность услуги       | `POST` | `/contracts/service-availability-checks` |
 
 Проверка доступности — отдельный бизнес-метод. ShareTrip вызывает его перед созданием поездки и не обращается к БД
 Contract Service напрямую.

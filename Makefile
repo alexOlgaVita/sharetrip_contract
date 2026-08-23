@@ -3,6 +3,8 @@ GO := go
 GO_PKG := ./...
 COVERAGE_PROFILE := coverage.out
 GOOSE_MIGRATION_DIR := migrations
+NAME_CONTRACT := create_table_contract
+NAME_CONTRACT_SERVICE := create_table_contract_service
 DOCKER_NAME := pg
 BINARY_NAME := sharetripContract.exe
 MAIN_PKG := ./cmd/sharetripContract
@@ -61,20 +63,23 @@ deps:
 
 .PHONY: migrate-status
 migrate-status:
-	goose -dir $(GOOSE_MIGRATION_DIR) postgres "postgres://postgres:password@localhost:6543/sharetrip?sslmode=disable" status
+	goose -dir $(GOOSE_MIGRATION_DIR) postgres "postgres://postgres:password@localhost:6545/sharetripContracts?sslmode=disable" status
 
 .PHONY: migrate-up
 migrate-up:
-	goose -dir $(GOOSE_MIGRATION_DIR) postgres "postgres://postgres:password@localhost:6543/sharetrip?sslmode=disable" up
+	goose -dir $(GOOSE_MIGRATION_DIR) postgres "postgres://postgres:password@localhost:6545/sharetripContracts?sslmode=disable" up
 
 .PHONY: migrate-down
 migrate-down:
-	goose -dir $(GOOSE_MIGRATION_DIR) postgres "postgres://postgres:password@localhost:6543/sharetrip?sslmode=disable" down
+	goose -dir $(GOOSE_MIGRATION_DIR) postgres "postgres://postgres:password@localhost:6545/sharetripContracts?sslmode=disable" down
+
+.PHONY: migrate-create
+migrate-create:
+	goose -dir $(GOOSE_MIGRATION_DIR) create -s $(NAME_CONTRACT) sql
+	goose -dir $(GOOSE_MIGRATION_DIR) create -s $(NAME_CONTRACT_SERVICE) sql
 
 .PHONY: up
 up:
-	goose -dir $(GOOSE_MIGRATION_DIR) create -s create_table_contract sql
-	goose -dir $(GOOSE_MIGRATION_DIR) create -s create_table_contract_service.sql
 	docker-compose up -d
 
 .PHONY: down

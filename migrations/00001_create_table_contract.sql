@@ -18,7 +18,6 @@ CREATE TABLE contracts (
                            starts_at   TIMESTAMPTZ NOT NULL,
                            ends_at     TIMESTAMPTZ NULL,
                            created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-                           updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     -- ends_at IS NULL — бессрочный договор; иначе окончание строго после начала.
                            CONSTRAINT contracts_period_check
