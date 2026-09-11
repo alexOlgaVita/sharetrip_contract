@@ -9,12 +9,12 @@ import (
 	"job4j.ru/sharetrip-contract/internal/http/dto"
 )
 
-func (u *ContractUsecase) ChecksServicesAvailability(
+func (u *ContractUsecase) CanCreateTrip(
 	ctx context.Context,
 	tx pgx.Tx,
-	req dto.ServiceCompanyRequest,
+	clientIId string,
 ) (*dto.AvailbaleServicesCompanyResponse, error) {
-	availbaleServicesCompany, err := u.ContractRepo.GetAvailabilityCompaniesService(ctx, tx, req)
+	availbaleServicesCompany, err := u.ContractRepo.GetAvailabilityCompaniesService(ctx, tx, toRepositoryCanCreateTripRequest(clientIId))
 	if err != nil {
 		log.Errorw("s.Repository.GetAvailabilityCompaniesService", err)
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "internal server error")

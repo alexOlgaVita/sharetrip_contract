@@ -41,7 +41,7 @@ func main() {
 	app := fiber.New()
 	server.Route(app.Group("/"))
 
-	err = app.Listen(":8080")
+	err = app.Listen(":8082")
 	if err != nil {
 		log.Fatal(err)
 	}

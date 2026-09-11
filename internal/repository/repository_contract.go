@@ -246,7 +246,7 @@ func (r *RepoPg) ContractActiveServiceList(ctx context.Context, contractId strin
 	return contractServices, nil
 }
 
-func (r *RepoPg) GetAvailabilityCompaniesService(ctx context.Context, tx pgx.Tx, serviceCompany dto.ServiceCompanyRequest) (*dto.AvailbaleServicesCompanyResponse, error) {
+func (r *RepoPg) GetAvailabilityCompaniesService(ctx context.Context, tx pgx.Tx, serviceCompany ServiceCompanyRequest) (*dto.AvailbaleServicesCompanyResponse, error) {
 	var it dto.AvailbaleServicesCompanyResponse
 
 	err := tx.QueryRow(

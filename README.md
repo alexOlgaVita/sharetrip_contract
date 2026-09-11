@@ -42,14 +42,15 @@ README.md           — ответственность, бизнес-прави�
 
 Описание: [`api/contract.yaml`](api/contract.yaml).
 
-| Действие                           | Метод  | URL                                      |
-|------------------------------------|--------|------------------------------------------|
-| Создать договор                    | `POST` | `/contracts`                             |
-| Получить договор по id             | `GET`  | `/contracts/{contractId}`                |
-| Получить активный договор компании | `GET`  | `/companies/{companyId}/active-contract` |
-| Изменить статус договора           | `POST` | `/contracts/{contractId}/status-changes` |
-| Заменить список услуг договора     | `PUT`  | `/contracts/{contractId}/services`       |
-| Проверить доступность услуги       | `POST` | `/contracts/service-availability-checks` |
+| Действие                                      | Метод  | URL                                      |
+|-----------------------------------------------|--------|------------------------------------------|
+| Создать договор                               | `POST` | `/contracts`                             |
+| Получить договор по id                        | `GET`  | `/contracts/{contractId}`                |
+| Получить активный договор компании            | `GET`  | `/companies/{companyId}/active-contract` |
+| Изменить статус договора                      | `POST` | `/contracts/{contractId}/status-changes` |
+| Заменить список услуг договора                | `PUT`  | `/contracts/{contractId}/services`       |
+| Проверить доступность услуги                  | `POST` | `/contracts/service-availability-checks` |
+| Проверить доступность услуги создания поездки | `GET`  | `/contracts/can_create_trip/{clientId}`  |
 
 Проверка доступности — отдельный бизнес-метод. ShareTrip вызывает его перед созданием поездки и не обращается к БД
 Contract Service напрямую.
@@ -96,6 +97,53 @@ Contract Service напрямую.
     - Нет записи → `SERVICE_NOT_IN_CONTRACT`.
 5. Проверить `is_available`.
     - `false` → `SERVICE_DISABLED`.
+6. Все проверки пройдены → `allowed: true`.
+
+### Результат
+
+| Исход             | Ответ API                                 |
+|-------------------|-------------------------------------------|
+| Услуга доступна   | `{ "allowed": true, ... }`                |
+| Услуга недоступна | `{ "allowed": false, "reason": "<код>" }` |
+
+### Коды причин отказа
+
+| Код                       | Смысл                  |
+|---------------------------|------------------------|
+| `NO_ACTIVE_CONTRACT`      | Нет активного договора |
+| `CONTRACT_SUSPENDED`      | Договор приостановлен  |
+| `CONTRACT_TERMINATED`     | Договор расторгнут     |
+| `CONTRACT_NOT_STARTED`    | Срок ещё не начался    |
+| `CONTRACT_EXPIRED`        | Срок истёк             |
+| `SERVICE_NOT_IN_CONTRACT` | Услуги нет в договоре  |
+| `SERVICE_DISABLED`        | Услуга отключена       |
+
+ShareTrip по `allowed` и `reason` решает, создавать поездку или вернуть ошибку. Contract Service поездки не создаёт.
+
+## Бизнес-правило: проверка доступности услуги создания поездки
+
+Метод `GET /v1/can_create_trip/{clientId}` отвечает на вопрос:
+
+> Может ли клиент с идентификатором `clientId` использовать услугу с кодом `trip.create` прямо сейчас?
+
+### Вход
+
+- `clientId` — идентификатор компании;
+
+### Алгоритм
+
+1. Найти договор компании со статусом `active`.
+   - Если нет → **отказ**, `NO_ACTIVE_CONTRACT`.
+2. Убедиться, что статус не `suspended` / `terminated`.
+   - `suspended` → `CONTRACT_SUSPENDED`;
+   - `terminated` → `CONTRACT_TERMINATED`.
+3. Сравнить `now` с периодом договора:
+   - `now < starts_at` → `CONTRACT_NOT_STARTED`;
+   - `ends_at` задан и `now > ends_at` → `CONTRACT_EXPIRED`.
+4. Найти услугу с кодом `trip.create` в договоре.
+   - Нет записи → `SERVICE_NOT_IN_CONTRACT`.
+5. Проверить `is_available`.
+   - `false` → `SERVICE_DISABLED`.
 6. Все проверки пройдены → `allowed: true`.
 
 ### Результат

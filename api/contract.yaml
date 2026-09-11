@@ -241,6 +241,46 @@ paths:
         "500":
           $ref: '#/components/responses/InternalError'
 
+  /contracts/can_create_trip/{clientId}:
+    get:
+      tags: [Availability]
+      operationId: canCreateTrip
+      description: |
+        Отдельный бизнес-метод для ShareTrip.
+
+        Вопрос: может ли компания использовать услугу "trip.create" прямо сейчас?
+
+        Учитывает активный договор, статусы suspended/terminated,
+        даты начала и окончания, наличие услуги и признак enabled.
+
+      summary: Проверка возможности создания поездки для клиента
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+      responses:
+        "200":
+          description: |
+            Результат проверки. HTTP 200 и при отказе:
+            причина в теле (`allowed: false`, `reason`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceAvailabilityCheckResponse'
+              examples:
+                allowed:
+                  summary: Услуга доступна
+                  value:
+                    allowed: true
+                    reason: service_allowed
+                denied:
+                  summary: Услуга недоступна
+                  value:
+                    allowed: false
+                    reason: NO_ACTIVE_CONTRACT
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/InternalError'
+
 components:
   parameters:
     ContractId:
@@ -257,6 +297,15 @@ components:
       in: path
       required: true
       description: Идентификатор компании
+      schema:
+        type: string
+        format: uuid
+
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      description: Идентификатор клиента
       schema:
         type: string
         format: uuid

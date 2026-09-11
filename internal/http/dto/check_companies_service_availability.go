@@ -1,10 +1,5 @@
 package dto
 
-type ServiceCompanyRequest struct {
-	CompanyId   string `json:"companyId"`
-	ServiceCode string `json:"serviceCode"`
-}
-
 type AvailbaleServicesCompanyResponse struct {
 	Allowed bool   `json:"allowed"`
 	Reason  string `json:"reason,omitempty"`

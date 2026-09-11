@@ -8,12 +8,12 @@ import (
 	"job4j.ru/sharetrip-contract/internal/http/dto"
 )
 
-func (s *ContractService) ChecksServicesAvailability(
+func (s *ContractService) CanCreateTrip(
 	ctx context.Context,
-	req dto.ServiceCompanyRequest,
+	clientId string,
 ) (*dto.AvailbaleServicesCompanyResponse, error) {
 	res, err := tx(ctx, s.Pool, func(tx pgx.Tx) (*dto.AvailbaleServicesCompanyResponse, error) {
-		resp, err := s.ContractUsecase.ChecksServicesAvailability(ctx, tx, req)
+		resp, err := s.ContractUsecase.CanCreateTrip(ctx, tx, clientId)
 		if err != nil {
 			return nil, fmt.Errorf("usecase.AddServicesToContract: %w", err)
 		}

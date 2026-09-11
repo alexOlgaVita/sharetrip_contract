@@ -22,9 +22,9 @@ func (s *Server) Route(route fiber.Router) {
 		s.GetContract,
 	)
 
-	route.Post(
-		"contracts/service-availability-checks",
-		s.ChecksServicesAvailability,
+	route.Get(
+		"contracts/can_create_trip/:client_id",
+		s.CanCreateTrip,
 	)
 
 	route.Put(

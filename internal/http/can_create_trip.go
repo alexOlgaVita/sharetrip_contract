@@ -7,22 +7,17 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"job4j.ru/sharetrip-contract/internal/domain"
-	"job4j.ru/sharetrip-contract/internal/http/dto"
 )
 
-func (s *Server) ChecksServicesAvailability(c *fiber.Ctx) error {
+func (s *Server) CanCreateTrip(c *fiber.Ctx) error {
 	ctx := c.UserContext()
-	var req dto.ServiceCompanyRequest
 
-	if err := c.BodyParser(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid JSON body")
-	}
-
-	if err := checkValidate(&req); err != nil {
+	clientId := c.Params("client_id")
+	if err := checkValidate(clientId); err != nil {
 		return err
 	}
 
-	resp, err := s.Service.ChecksServicesAvailability(ctx, req)
+	resp, err := s.Service.CanCreateTrip(ctx, clientId)
 	if err != nil {
 		if errors.Is(err, domain.ErrContractNotFound) {
 			return fiber.NewError(fiber.StatusNotFound, "contract is not found")
@@ -34,15 +29,12 @@ func (s *Server) ChecksServicesAvailability(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func checkValidate(req *dto.ServiceCompanyRequest) error {
-	if req.CompanyId == "" {
+func checkValidate(companyId string) error {
+	if companyId == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "companyId is required")
 	}
-	if _, err := uuid.Parse(req.CompanyId); err != nil {
+	if _, err := uuid.Parse(companyId); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "companyId must be a valid UUID")
-	}
-	if req.ServiceCode == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "serviceCode is required")
 	}
 	return nil
 }
